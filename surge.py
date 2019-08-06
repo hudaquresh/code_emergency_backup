@@ -74,60 +74,44 @@ def ncdump(nc_fid, verb=True):
                 print_ncattr(var)
     return nc_attrs, nc_dims, nc_vars
 
-def calculate_intensity(intensity_data_descriptors = None, mask_distance = None,
-                        mask_coordinate = None, mask_category = None):
+
+def calculate_surge(surge_data_descriptors = None, mask_distance = None,
+                    mask_coordinate = None, mask_category = None):
+    
     r'''
+    Calculate surge heights. 
 
-    Parameters
-    ----------
-    intensity_data_descriptors : list
-        A list containing the path, label, and type of file
-
-
-    Returns
-    -------
     '''
+    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharey=False, sharex=False) 
+    fig.set_size_inches(20.0, 30.0) 
+    bar_width = 1.0 
+    opacity = 1.0 
+    
+    wind_models = ["holland80", "holland10", "CLE", "SLOSH",
+                   "rankine", "modified-rankine", "DeMaria"] 
 
-    fig, (ax1, ax2) = plt.subplots(nrows = 2, ncols = 1, sharey=False, sharex=False)
-    fig.set_size_inches(20.0, 30.0)
+    amr_levels = ["amr2", "amr5"]
+ 
+    if surge_data_descriptors is not None:
+        for (index, data) in enumerate(surge_data_descriptors):
+            
+            if any(model in data[0] for model in wind_models): 
+                label = model 
+            gauge_data = numpy.loadtxt(data[0], delimiter = ',', 
+                                      skiprows = 1)
+            max_surge = gauge_data[:, 2]
+            mu = numpy.mean(max_surge) 
+            var = numpy.var(max_surge) 
+    
+            events_surge = numpy.array(max_surge)
 
-    bar_width = 1.0
-    opacity = 1.0
-
-    if intensity_data_descriptors is not None:
-        for (index, data) in enumerate(intensity_data_descriptors):
-            if data[2] == "other_chaz":
-                data_path = os.path.join("data", data[0])
-                storms = storm.load_other_chaz_storms(path = data_path,
-                                mask_distance = mask_distance,
-                                mask_coordinate = mask_coordinate,
-                                mask_category = mask_category,
-                                categorization = "NHC")
-            elif data[2] == "mat":
-                data_path = os.path.join("data", data[0])
-                storms = storm.load_emanuel_storms(path = data_path,
-                                mask_distance = mask_distance,
-                                mask_coordinate = mask_coordinate,
-                                mask_category = mask_category,
-                                categorization = "NHC")
-            else:
-                break
-
-            events_intensity = numpy.ones((1,len(storms)), dtype = float)
-            for (i, storm_track) in enumerate(storms):
-                storm_track.max_wind_speed = units.convert(storm_track.max_wind_speed, 'm/s', 'knots')
-                events_intensity[0,i] = numpy.max(storm_track.max_wind_speed)
-
-
-            #bins_intensity = numpy.array([1.0, 30.0, 64.0, 83.0, 96.0, 113.0, 135.0, 160.0, 180.0])
-            bins_intensity = numpy.linspace(1.0, 200, 100)
-
-            period = data[-1]
-
-            hist, bin_edges = numpy.histogram(events_intensity, bins_intensity)
-            index_edges = numpy.ones(bin_edges.shape) * (index + bar_width)
-            n = hist.sum()
-
+            bins_surge = numpy.linspace(0.2, 6.0, 10) 
+            period = data[-1] 
+            
+            hist, bin_edges = numpy.histogram(events_surge, bins_surge) 
+            index_edges = numpy.ones(bin_edges.shape) * (index + bar_width) 
+            n = hist.sum() 
+            
             # Complement of empirical distribution function
             ECDF_c = numpy.cumsum(hist[::-1])[::-1] * 1/n
             ECDF = numpy.ones(ECDF_c.shape, dtype = float) - ECDF_c
@@ -135,27 +119,26 @@ def calculate_intensity(intensity_data_descriptors = None, mask_distance = None,
             return_period = period * 1/n * (1/ECDF_c)
 
 
-            T_r = numpy.zeros(events_intensity.shape, dtype=float)
+            T_r = numpy.zeros(events_surge.shape, dtype=float)
 
-            events_intensity = numpy.sort(events_intensity)
+            events_surge = numpy.sort(events_surge)
 
             counter = 0
 
-            for i in range(events_intensity.shape[1]):
-                if events_intensity[0,i] < bin_edges[counter]:
+            for i in range(events_surge.shape[1]):
+                if events_surge[0,i] < bin_edges[counter]:
                     T_r[0,i] = return_period[counter]
                 else:
                     counter += 1
                     T_r[0,i] = return_period[counter]
-
+            
             ax1.bar(index_edges[:-1] + bin_edges[:-1], ECDF_c, bar_width,
                             label = data[1], color = data[-2],
                             alpha = opacity)
 
             ax2.semilogx(T_r[0, :], events_intensity[0, :],  
                     label = data[1], color = data[-2])
-
-
+              
     title_font = {'fontname':'Arial', 'size':'10', 'color':'black', 'weight':'normal',
               'verticalalignment':'bottom'} # Bottom vertical alignment for more space
     axis_font = {'fontname':'Arial', 'size':'8'}
@@ -181,19 +164,16 @@ def calculate_intensity(intensity_data_descriptors = None, mask_distance = None,
     plt.show()
 
     return fig
+        
+
+    
+
+     
+
 
 
 if __name__ == '__main__':
 
-    # nc_fid_chaz_ny_nc = Dataset("data/LongIsland_chaz_test.nc", 'r')
-    # nc_attrs, nc_dims, nc_vars = ncdump(nc_fid_chaz_ny_nc)
-
-    mumbai_intensity_data_descriptors = [
-        ["Obs_ibtracks_knaff15_Mumbai.nc", "Obs NC", "other_chaz", "k", 2016-1879+1],
-        ["Emanuel_Mumbai.nc", "Emanuel NC", "other_chaz", "b", 1850/0.061545],
-        ["CHAZ_knaff15_Mumbai.nc", "CHAZ NC", "other_chaz", "r", 32.0*120*27],
-        ["Mumbai_IO_ncep_reanal.mat", "Emanuel Old Mat", "mat", "c", 1850/0.061545],
-        ["Mumbai3_io_ncep_reanalcal.mat", "Emanuel Mat", "mat", "m", 1850/0.061545]]
 
     mumbai_intensity_data_descriptors = [
         ["Obs_ibtracks_knaff15_Mumbai.nc", "Obs NC", "other_chaz", "k", 2016-1879+1],
