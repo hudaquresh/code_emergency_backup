@@ -196,9 +196,7 @@ if __name__ == '__main__':
         ["Mumbai3_io_ncep_reanalcal.mat", "Emanuel Mat", "mat", "m", 1850/0.061545]]
 
     mumbai_intensity_data_descriptors = [
-        ["Obs_ibtracks_knaff15_Mumbai.nc", "Obs NC", "other_chaz", "k", 2016-1879+1],
-        ["Emanuel_Mumbai.nc", "Emanuel NC", "other_chaz", "b", 1850/0.061545], 
-        ["CHAZ_knaff15_Mumbai.nc", "CHAZ NC", "other_chaz", "r", 32.0*120*27]]
+        ["Obs_ibtracks_knaff15_Mumbai.nc", "Obs NC", "other_chaz", "k", 2016-1879+1]]
 
     calculate_intensity(intensity_data_descriptors = mumbai_intensity_data_descriptors,
                     mask_distance = None,
